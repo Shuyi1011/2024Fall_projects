@@ -129,6 +129,28 @@ class BlokusDuoAI:
                     if self.is_valid_move(piece, (row, col)):
                         valid_positions += 1
         return valid_positions
+    
+    def calculate_score(self, player):
+        """
+        Calculate the score for a player based on unplaced pieces.
+        Each square in an unplaced piece contributes 1 point.
+        Lower scores are better.
+        """
+        remaining_squares = 0
+        for piece in self.pieces[player]:
+            remaining_squares += len(piece)  # Each square in a piece adds 1 to the score
+        return remaining_squares
+
+    def display_scores(self):
+        """
+        Display the scores for both players at the end of the game.
+        """
+        print("\nGame Over! Final Scores:")
+        scores = {player: self.calculate_score(player) for player in self.players}
+        for player, score in scores.items():
+            print(f"{player}: {score} points")
+        winner = min(scores, key=scores.get)  # Player with the lowest score wins
+        print(f"Winner: {winner}!")
 
     def play(self):
         """Main game loop for AI vs AI."""
@@ -152,6 +174,7 @@ class BlokusDuoAI:
             # Check for game end
             if not any(self.random_ai(player) for player in self.players):
                 print("Game Over!")
+                self.display_scores()
                 break
 
             # Switch player
