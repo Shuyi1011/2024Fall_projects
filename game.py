@@ -149,8 +149,11 @@ class BlokusDuoAI:
         scores = {player: self.calculate_score(player) for player in self.players}
         for player, score in scores.items():
             print(f"{player}: {score} points")
-        winner = min(scores, key=scores.get)  # Player with the lowest score wins
-        print(f"Winner: {winner}!")
+        if scores["Player 1"] == scores["Player 2"]:
+            print("It's a tie!")
+        else:
+            winner = min(scores, key=scores.get)  # Player with the lowest score wins
+            print(f"Winner: {winner}!")
 
     def play(self):
         """Main game loop for AI vs AI."""
