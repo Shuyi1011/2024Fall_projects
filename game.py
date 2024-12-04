@@ -46,7 +46,19 @@ class BlokusDuoAI:
         ]
         return pieces
 
-
+    def rotate_piece(piece):
+        """Generate all unique rotations of a piece."""
+        rotations = set()
+        current = piece
+        for _ in range(4):  # 0°, 90°, 180°, 270°
+            # (x, y) -> (y, -x)
+            current = [(y, -x) for x, y in current]
+            # Normalize the piece to start from the origin
+            min_x = min(x for x, y in current)
+            min_y = min(y for x, y in current)
+            normalized = [(x - min_x, y - min_y) for x, y in current]
+            rotations.add(tuple(normalized)) 
+        return [list(r) for r in rotations]  
     
     def generate_pieces(self):
         """Generate full Blokus Duo pieces for each player."""
