@@ -76,6 +76,7 @@ class BlokusDuoAI:
         start_x, start_y = position
         # print(f"Checking move for {player}: Piece {piece} at {position}")
         has_corner_contact = False
+        current_player = "X" if player == "Player 1" else "O"
 
         for dx, dy in piece:
             x, y = start_x + dx, start_y + dy
@@ -95,13 +96,13 @@ class BlokusDuoAI:
             else:
                 for nx, ny in [(x-1, y-1), (x-1, y+1), (x+1, y-1), (x+1, y+1)]:
                     if 0 <= nx < self.board_size and 0 <= ny < self.board_size:
-                        if self.board[nx][ny] == player[0]:
+                        if self.board[nx][ny] == current_player:
                             has_corner_contact = True
 
                 # Check if the piece has edge contact with existing pieces
                 for nx, ny in [(x-1, y), (x+1, y), (x, y-1), (x, y+1)]:
                     if 0 <= nx < self.board_size and 0 <= ny < self.board_size:
-                        if self.board[nx][ny] == player[0]:
+                        if self.board[nx][ny] == current_player:
                             return False
 
         return has_corner_contact
