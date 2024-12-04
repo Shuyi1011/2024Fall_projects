@@ -183,8 +183,8 @@ class BlokusDuoAI:
         remaining_squares = 0
         for piece in self.pieces[player]:
             remaining_squares += len(piece)  # Each square in a piece adds 1 to the score
-        if remaining_squares == 0:  # All pieces placed
-            return -5
+        # if remaining_squares == 0:  # All pieces placed
+        #     return -5
         return remaining_squares
 
     def display_scores(self):
