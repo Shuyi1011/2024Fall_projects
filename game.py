@@ -59,22 +59,32 @@ class BlokusDuoAI:
         """Print the current board."""
         for row in self.board:
             print(' '.join(['.' if cell is None else cell[0] for cell in row]))
-
-    def is_valid_move(self, piece, position):
-        """Check if a piece can be placed at a given position."""
+    
+    def is_valid_move(self, player, piece, position):
         start_x, start_y = position
+        has_corner_contact = False
         for dx, dy in piece:
             x, y = start_x + dx, start_y + dy
-            if not (0 <= x < self.board_size and 0 <= y < self.board_size):  # Within bounds
+            if not (0 <= x < self.board_size and 0 <= y < self.board_size):
                 return False
-            if self.board[x][y] is not None:  # No overlap
+            if self.board[x][y] is not None:
                 return False
-        return True
+            # check if the piece has corner contact with the same player's piece
+            for nx, ny in [(x-1, y-1), (x-1, y+1), (x+1, y-1), (x+1, y+1)]:
+                if 0 <= nx < self.board_size and 0 <= ny < self.board_size:
+                    if self.board[nx][ny] == player[0]:  
+                        has_corner_contact = True
+            # checkj if the piece has edge contact with the same player's piece (which is not allowed)
+            for nx, ny in [(x-1, y), (x+1, y), (x, y-1), (x, y+1)]:
+                if 0 <= nx < self.board_size and 0 <= ny < self.board_size:
+                    if self.board[nx][ny] == player[0]:
+                        return False
+        return has_corner_contact
 
     def place_piece(self, player, piece_index, position):
         """Place a piece on the board for the current player."""
         piece = self.pieces[player][piece_index]
-        if self.is_valid_move(piece, position):
+        if self.is_valid_move(player, piece, position):
             start_x, start_y = position
             for dx, dy in piece:
                 x, y = start_x + dx, start_y + dy
@@ -94,7 +104,7 @@ class BlokusDuoAI:
         for piece_index, piece in enumerate(self.pieces[player]):
             for row in range(self.board_size):
                 for col in range(self.board_size):
-                    if self.is_valid_move(piece, (row, col)):
+                    if self.is_valid_move(player, piece, (row, col)):
                         valid_moves.append((piece_index, (row, col)))
         return random.choice(valid_moves) if valid_moves else None
 
@@ -105,7 +115,7 @@ class BlokusDuoAI:
         for piece_index, piece in enumerate(self.pieces[player]):
             for row in range(self.board_size):
                 for col in range(self.board_size):
-                    if self.is_valid_move(piece, (row, col)):
+                    if self.is_valid_move(player, piece, (row, col)):
                         # Heuristic: Maximize placement options for the next turn
                         score = self.evaluate_board_after_move(player, piece, (row, col))
                         if score > best_score:
@@ -139,6 +149,8 @@ class BlokusDuoAI:
         remaining_squares = 0
         for piece in self.pieces[player]:
             remaining_squares += len(piece)  # Each square in a piece adds 1 to the score
+        if remaining_squares == 0:  # All pieces placed
+            return -5
         return remaining_squares
 
     def display_scores(self):
@@ -157,31 +169,26 @@ class BlokusDuoAI:
 
     def play(self):
         """Main game loop for AI vs AI."""
-        while True:
+        skip_count = 0  # Number of consecutive turns skipped
+        while skip_count < 2:  # Game ends when both players skip their turns
             self.display_board()
             print(f"\n{self.current_player}'s turn:")
 
-            # AI logic
-            if self.current_player == "Player 1":
-                move = self.random_ai(self.current_player)  # Dumb player
-            else:
-                move = self.heuristic_ai(self.current_player)  # Wise player
-
+            move = self.random_ai(self.current_player)
             if move:
                 piece_index, position = move
                 self.place_piece(self.current_player, piece_index, position)
                 print(f"{self.current_player} placed a piece at {position}.")
+                skip_count = 0  # Reset skip count
             else:
                 print(f"{self.current_player} has no valid moves and passes.")
-            
-            # Check for game end
-            if not any(self.random_ai(player) for player in self.players):
-                print("Game Over!")
-                self.display_scores()
-                break
+                skip_count += 1  # Increment skip count
 
-            # Switch player
+            # Switch to the next player
             self.switch_player()
+
+        print("Game Over!")
+        self.display_scores()
 
 if __name__ == "__main__":
     game = BlokusDuoAI()
