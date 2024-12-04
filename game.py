@@ -46,7 +46,7 @@ class BlokusDuoAI:
         ]
         return pieces
 
-    def rotate_piece(piece):
+    def rotate_piece(self, piece):
         """Generate all unique rotations of a piece."""
         rotations = set()
         current = piece
@@ -74,36 +74,53 @@ class BlokusDuoAI:
     
     def is_valid_move(self, player, piece, position):
         start_x, start_y = position
+        # print(f"Checking move for {player}: Piece {piece} at {position}")
         has_corner_contact = False
+
         for dx, dy in piece:
             x, y = start_x + dx, start_y + dy
+
+            # check if the piece is out of bounds
             if not (0 <= x < self.board_size and 0 <= y < self.board_size):
                 return False
+
+            # check if the piece overlaps with existing pieces
             if self.board[x][y] is not None:
                 return False
-            # check if the piece has corner contact with the same player's piece
-            for nx, ny in [(x-1, y-1), (x-1, y+1), (x+1, y-1), (x+1, y+1)]:
-                if 0 <= nx < self.board_size and 0 <= ny < self.board_size:
-                    if self.board[nx][ny] == player[0]:  
-                        has_corner_contact = True
-            # checkj if the piece has edge contact with the same player's piece (which is not allowed)
-            for nx, ny in [(x-1, y), (x+1, y), (x, y-1), (x, y+1)]:
-                if 0 <= nx < self.board_size and 0 <= ny < self.board_size:
-                    if self.board[nx][ny] == player[0]:
-                        return False
+
+            # check if the piece has corner contact with existing pieces
+            if not self.placed_pieces[player]:  # First piece
+                if (x, y) == self.start_positions[player]:
+                    has_corner_contact = True
+            else:
+                for nx, ny in [(x-1, y-1), (x-1, y+1), (x+1, y-1), (x+1, y+1)]:
+                    if 0 <= nx < self.board_size and 0 <= ny < self.board_size:
+                        if self.board[nx][ny] == player[0]:
+                            has_corner_contact = True
+
+                # Check if the piece has edge contact with existing pieces
+                for nx, ny in [(x-1, y), (x+1, y), (x, y-1), (x, y+1)]:
+                    if 0 <= nx < self.board_size and 0 <= ny < self.board_size:
+                        if self.board[nx][ny] == player[0]:
+                            return False
+
         return has_corner_contact
+        # return True
 
     def place_piece(self, player, piece_index, position):
-        """Place a piece on the board for the current player."""
-        piece = self.pieces[player][piece_index]
-        if self.is_valid_move(player, piece, position):
-            start_x, start_y = position
-            for dx, dy in piece:
-                x, y = start_x + dx, start_y + dy
-                self.board[x][y] = "X" if player == "Player 1" else "O"
-            self.placed_pieces[player].append(piece)
-            self.pieces[player].pop(piece_index)  # Remove used piece
-            return True
+        """Try to place a piece, checking all rotations."""
+        original_piece = self.pieces[player][piece_index]
+        # Try all rotations of the piece
+        rotated_pieces = self.rotate_piece(original_piece)
+        for rotated_piece in rotated_pieces:
+            if self.is_valid_move(player, rotated_piece, position):
+                start_x, start_y = position
+                for dx, dy in rotated_piece:
+                    x, y = start_x + dx, start_y + dy
+                    self.board[x][y] = "X" if player == "Player 1" else "O"
+                self.placed_pieces[player].append(rotated_piece)
+                self.pieces[player].pop(piece_index)  # Remove used piece
+                return True
         return False
 
     def switch_player(self):
@@ -111,14 +128,18 @@ class BlokusDuoAI:
         self.current_player = self.players[1] if self.current_player == self.players[0] else self.players[0]
 
     def random_ai(self, player):
-        """Dumb AI: Randomly selects a piece and position."""
+        """Dumb AI: Randomly selects a piece, rotation, and position."""
         valid_moves = []
         for piece_index, piece in enumerate(self.pieces[player]):
             for row in range(self.board_size):
                 for col in range(self.board_size):
-                    if self.is_valid_move(player, piece, (row, col)):
-                        valid_moves.append((piece_index, (row, col)))
-        return random.choice(valid_moves) if valid_moves else None
+                    for rotated_piece in self.rotate_piece(piece):
+                        if self.is_valid_move(player, rotated_piece, (row, col)):
+                            valid_moves.append((piece_index, (row, col)))
+        if valid_moves:
+            return random.choice(valid_moves) 
+        print(f"Valid moves for {player}: {valid_moves}") 
+        return None  
 
     def heuristic_ai(self, player):
         """Wise AI: Selects the move that maximizes board coverage."""
@@ -189,9 +210,11 @@ class BlokusDuoAI:
             move = self.random_ai(self.current_player)
             if move:
                 piece_index, position = move
-                self.place_piece(self.current_player, piece_index, position)
-                print(f"{self.current_player} placed a piece at {position}.")
-                skip_count = 0  # Reset skip count
+                if self.place_piece(self.current_player, piece_index, position):
+                    print(f"{self.current_player} placed a piece at {position}.")
+                    skip_count = 0  # Reset skip count
+                else:
+                    print(f"{self.current_player} could not place a piece.")
             else:
                 print(f"{self.current_player} has no valid moves and passes.")
                 skip_count += 1  # Increment skip count
@@ -201,7 +224,6 @@ class BlokusDuoAI:
 
         print("Game Over!")
         self.display_scores()
-
 if __name__ == "__main__":
     game = BlokusDuoAI()
     game.play()
