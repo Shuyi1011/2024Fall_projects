@@ -108,22 +108,19 @@ class BlokusDuoAI:
         return has_corner_contact
         # return True
 
-    def place_piece(self, player, piece_index, position):
+    def place_piece(self, player, piece_index, rotated_pieces, position):
         """Try to place a piece, checking all rotations."""
-        original_piece = self.pieces[player][piece_index]
-        # Try all rotations of the piece
-        rotated_pieces = self.rotate_piece(original_piece)
-        for rotated_piece in rotated_pieces:
-            if self.is_valid_move(player, rotated_piece, position):
-                start_x, start_y = position
-                for dx, dy in rotated_piece:
-                    x, y = start_x + dx, start_y + dy
-                    self.board[x][y] = "X" if player == "Player 1" else "O"
-                self.placed_pieces[player].append(rotated_piece)
-                self.pieces[player].pop(piece_index)  # Remove used piece
-                return True
-        return False
-
+        # piece = self.pieces[player][piece_index]
+        piece = rotated_pieces
+        print(f"Placing piece {piece} for {player} at {position}")
+        start_x, start_y = position
+        for dx, dy in piece:
+            x, y = start_x + dx, start_y + dy
+            self.board[x][y] = "X" if player == "Player 1" else "O"
+        self.placed_pieces[player].append(piece)
+        self.pieces[player].pop(piece_index)  # Remove used piece
+        return True
+    
     def switch_player(self):
         """Switch to the next player."""
         self.current_player = self.players[1] if self.current_player == self.players[0] else self.players[0]
@@ -136,7 +133,7 @@ class BlokusDuoAI:
                 for col in range(self.board_size):
                     for rotated_piece in self.rotate_piece(piece):
                         if self.is_valid_move(player, rotated_piece, (row, col)):
-                            valid_moves.append((piece_index, (row, col)))
+                            valid_moves.append((piece_index, (row, col), rotated_piece))
         if valid_moves:
             return random.choice(valid_moves) 
         print(f"Valid moves for {player}: {valid_moves}") 
@@ -210,8 +207,8 @@ class BlokusDuoAI:
 
             move = self.random_ai(self.current_player)
             if move:
-                piece_index, position = move
-                if self.place_piece(self.current_player, piece_index, position):
+                piece_index, position, rotated_pieces = move
+                if self.place_piece(self.current_player, piece_index,rotated_pieces, position):
                     print(f"{self.current_player} placed a piece at {position}.")
                     skip_count = 0  # Reset skip count
                 else:
