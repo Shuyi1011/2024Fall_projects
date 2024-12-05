@@ -71,7 +71,7 @@ class BlokusDuoAI:
         """Print the current board."""
         for row in self.board:
             print(' '.join(['.' if cell is None else cell[0] for cell in row]))
-    
+
     def is_valid_move(self, player, piece, position):
         start_x, start_y = position
         # print(f"Checking move for {player}: Piece {piece} at {position}")
@@ -203,6 +203,11 @@ class BlokusDuoAI:
         skip_count = 0  # Number of consecutive turns skipped
         while skip_count < 2:  # Game ends when both players skip their turns
             self.display_board()
+            with open("board.txt", "a") as f:
+                for row in self.board:
+                    f.write(' '.join(['.' if cell is None else cell[0] for cell in row]) + "\n")
+                f.write("\n")
+
             print(f"\n{self.current_player}'s turn:")
 
             move = self.random_ai(self.current_player)
