@@ -12,6 +12,7 @@ class BlokusDuoAI:
         self.current_player = self.players[0]
         self.placed_pieces = {'Player 1': [], 'Player 2': []}
         self.maximizing_player = 'Player 1'
+        self.valid_pos = self.initial_valid_pos()
     
     def generate_full_blokus_pieces(self):
         """Generate the complete set of Blokus Duo pieces."""
@@ -28,10 +29,10 @@ class BlokusDuoAI:
 
             # 4-square pieces
             [(0, 0), (1, 0), (2, 0), (3, 0)],  # Line
-            [(0, 0), (0, 1), (0, 2), (0, 3)],  # Horizontal line
             [(0, 0), (0, 1), (0, 2), (1, 2)],  # L-shape
             [(0, 0), (0, 1), (1, 0), (1, 1)],  # Square
             [(0, 0), (1, 0), (1, 1), (1, 2)],  # Zigzag
+            [(0, 0), (0, 1), (0, 2), (1, 1)],
 
             # 5-square pieces
             [(0, 0), (1, 0), (2, 0), (3, 0), (4, 0)],  # Long line
@@ -75,13 +76,11 @@ class BlokusDuoAI:
         for row in self.board:
             print(' '.join(['.' if cell is None else cell[0] for cell in row]))
 
-    def is_valid_move(self, player, piece, position, board=None, player_has_placed_pieces=None):
+    def is_valid_move(self, player, piece, position):
         start_x, start_y = position
         # print(f"Checking move for {player}: Piece {piece} at {position}")
         has_corner_contact = False
         current_player = "X" if player == "Player 1" else "O"
-        if board is None:
-            board = self.board
 
 
         for dx, dy in piece:
@@ -92,39 +91,24 @@ class BlokusDuoAI:
                 return False
 
             # check if the piece overlaps with existing pieces
-            if board[x][y] is not None:
+            if self.board[x][y] is not None:
                 return False
 
             # check if the piece has corner contact with existing pieces
-            if player_has_placed_pieces is None:
-                if not self.placed_pieces[player]:  # First piece
-                    if (x, y) == self.start_positions[player]:
-                        has_corner_contact = True
-                else:
-                    for nx, ny in [(x-1, y-1), (x-1, y+1), (x+1, y-1), (x+1, y+1)]:
-                        if 0 <= nx < self.board_size and 0 <= ny < self.board_size:
-                            if board[nx][ny] == current_player:
-                                has_corner_contact = True
-
-                    for nx, ny in [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]:
-                        if 0 <= nx < self.board_size and 0 <= ny < self.board_size:
-                            if board[nx][ny] == current_player:
-                                return False
-
-            elif player_has_placed_pieces is False:
+            if not self.placed_pieces[player]:  # First piece
                 if (x, y) == self.start_positions[player]:
                     has_corner_contact = True
-            elif player_has_placed_pieces is True:
-                for nx, ny in [(x - 1, y - 1), (x - 1, y + 1), (x + 1, y - 1), (x + 1, y + 1)]:
+            else:
+                for nx, ny in [(x-1, y-1), (x-1, y+1), (x+1, y-1), (x+1, y+1)]:
                     if 0 <= nx < self.board_size and 0 <= ny < self.board_size:
-                        if board[nx][ny] == current_player:
+                        if self.board[nx][ny] == current_player:
                             has_corner_contact = True
 
-                # Check if the piece has edge contact with existing pieces
-                for nx, ny in [(x-1, y), (x+1, y), (x, y-1), (x, y+1)]:
+                for nx, ny in [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]:
                     if 0 <= nx < self.board_size and 0 <= ny < self.board_size:
-                        if board[nx][ny] == current_player:
+                        if self.board[nx][ny] == current_player:
                             return False
+
 
         return has_corner_contact
         # return True
@@ -138,6 +122,7 @@ class BlokusDuoAI:
         for dx, dy in piece:
             x, y = start_x + dx, start_y + dy
             self.board[x][y] = "X" if player == "Player 1" else "O"
+        self.update_valid_pos(piece, position, self.valid_pos)
         self.placed_pieces[player].append(piece)
         self.pieces[player].pop(piece_index)  # Remove used piece
         return True
@@ -167,19 +152,22 @@ class BlokusDuoAI:
         for piece_index, piece in enumerate(self.pieces[player]):
             ro_pieces = self.rotate_piece(piece)
             for ro_piece in ro_pieces:
-                for row in range(self.board_size):
-                    for col in range(self.board_size):
-                        if self.is_valid_move(player, ro_piece, (row, col)):
+                for pos in self.valid_pos:
+                        if self.is_valid_move(player, ro_piece, pos):
                             # Heuristic: Maximize placement options for the next turn
-                            pieces_copy = copy.deepcopy(self.pieces)
+                            pieces_copy = {player: self.pieces[player][:] for player in self.pieces}
                             pieces_copy[player].pop(piece_index)
-                            score = self.evaluate_board_after_move(player, ro_piece, (row, col), pieces_copy)
+                            placed_pieces_copy = {player: self.placed_pieces[player][:] for player in self.placed_pieces}
+                            placed_pieces_copy[player].append(piece)
+                            valid_pos_copy = self.valid_pos[:]
+                            self.update_valid_pos(piece, pos, valid_pos_copy)
+                            score = self.evaluate_board_after_move(player, ro_piece, pos, pieces_copy, placed_pieces_copy, valid_pos_copy)
                             if score > best_score:
                                 best_score = score
-                                best_move = (piece_index, (row, col), ro_piece)
+                                best_move = (piece_index, pos, ro_piece)
         return best_move
 
-    def evaluate_board_after_move(self, player, piece, position, pieces):
+    def evaluate_board_after_move(self, player, piece, position, pieces, placed_pieces_copy, valid_pos_copy):
         """Evaluate board based on the number of valid moves after placing a piece."""
         # Simplified heuristic: Favor moves that maximize valid positions
         temp_board = [row[:] for row in self.board]
@@ -188,13 +176,16 @@ class BlokusDuoAI:
             x, y = start_x + dx, start_y + dy
             temp_board[x][y] = "X" if player == "Player 1" else "O"
 
+
         valid_positions = 0
         for piece in pieces[player]:
             rotated_pieces = self.rotate_piece(piece)
             for rotated_piece in rotated_pieces:
-                for row in range(self.board_size):
-                    for col in range(self.board_size):
-                        if self.is_valid_move(player, rotated_piece, (row, col), temp_board, player_has_placed_pieces=True):
+                placed_pieces_copy[player].append(piece)
+
+                for pos in valid_pos_copy:
+
+                        if self.is_valid_move_sim(player, rotated_piece, pos, temp_board, placed_pieces_copy):
                             valid_positions += 1
         return valid_positions
     
@@ -225,7 +216,19 @@ class BlokusDuoAI:
             winner = min(scores, key=scores.get)  # Player with the lowest score wins
             print(f"Winner: {winner}!")
 
+    def initial_valid_pos(self):
+        valid_positions = []
+        for row in range(self.board_size):
+            for col in range(self.board_size):
+                valid_positions.append((row, col))
+        return valid_positions
 
+    def update_valid_pos(self, piece, position, valid_positions):
+        start_x, start_y = position
+        for dx, dy in piece:
+            x, y = start_x + dx, start_y + dy
+            if (x, y) in valid_positions:
+                valid_positions.remove((x, y))
 
 
     def minimax_ai(self, player, depth=2):
@@ -238,6 +241,8 @@ class BlokusDuoAI:
         # If we are the current player, we want to maximize our advantage.
         maximizing_player = True if player == self.maximizing_player else False
 
+        valid_positions = self.valid_pos[:]
+
         alpha = -math.inf
         beta = math.inf
 
@@ -246,33 +251,31 @@ class BlokusDuoAI:
         for piece_index, piece in enumerate(self.pieces[player]):
             rotated_pieces = self.rotate_piece(piece)
             for ro_piece in rotated_pieces:
-                for row in range(self.board_size):
-                    for col in range(self.board_size):
-                        if self.is_valid_move(player, ro_piece, (row, col)):
-                            # Simulate move
-                            score = self.simulate_and_minimax(player, piece_index, ro_piece, (row, col), depth, alpha,
-                                                              beta, maximizing_player)
+                for pos in valid_positions:
+                    if self.is_valid_move(player, ro_piece, pos):
+                        # Simulate move
+                        score = self.simulate_and_minimax(player, piece_index, ro_piece, pos, depth, alpha,
+                                                          beta, maximizing_player, valid_positions)
 
-                            if maximizing_player:
-                                if score > best_score:
-                                    best_score = score
-                                    best_move = (piece_index, (row, col), ro_piece)
-                                    alpha = max(alpha, best_score)
-                            else:
-                                # If we were minimizing, but since typically minimax is from the perspective of the current player,
-                                # this code assumes "player" is always the perspective of the AI.
-                                # If you want player 2 to be minimizing, adjust logic accordingly.
-                                # Typically, we consider the AI as always maximizing from its perspective.
-                                # For a truly symmetrical minimax, you'd determine "maximizing_player" based on player identity.
-                                if score < best_score:
-                                    best_score = score
-                                    best_move = (piece_index, (row, col), ro_piece)
-                                    beta = min(beta, best_score)
+                        if maximizing_player:
+                            if score > best_score:
+                                best_score = score
+                                best_move = (piece_index, pos, ro_piece)
+                                alpha = max(alpha, best_score)
+                        else:
+                            # If we were minimizing, but since typically minimax is from the perspective of the current player,
+                            # this code assumes "player" is always the perspective of the AI.
+                            # If you want player 2 to be minimizing, adjust logic accordingly.
+                            # Typically, we consider the AI as always maximizing from its perspective.
+                            # For a truly symmetrical minimax, you'd determine "maximizing_player" based on player identity.
+                            if score < best_score:
+                                best_score = score
+                                best_move = (piece_index, pos, ro_piece)
+                                beta = min(beta, best_score)
+
                             # Alpha-Beta Pruning
                             if beta <= alpha:
                                 break
-                    if beta <= alpha:
-                        break
                 if beta <= alpha:
                     break
             if beta <= alpha:
@@ -280,22 +283,17 @@ class BlokusDuoAI:
 
         return best_move
 
-    def simulate_and_minimax(self, player, piece_index, piece, position, depth, alpha, beta, maximizing_player):
+    def simulate_and_minimax(self, player, piece_index, piece, position, depth, alpha, beta, maximizing_player, valid_positions):
         """
         Place the piece, switch player, and call minimax recursively.
         Returns the evaluated score of this position.
         """
         # Create a deep copy of the game state
         board_copy = [row[:] for row in self.board]
-        pieces_copy = {
-            "Player 1": copy.deepcopy(self.pieces["Player 1"]),
-            "Player 2": copy.deepcopy(self.pieces["Player 2"])
-        }
-        placed_pieces_copy = {
-            "Player 1": copy.deepcopy(self.placed_pieces["Player 1"]),
-            "Player 2": copy.deepcopy(self.placed_pieces["Player 2"])
-        }
+        pieces_copy = {player: self.pieces[player][:] for player in self.pieces}
+        placed_pieces_copy = {player: self.placed_pieces[player][:] for player in self.placed_pieces}
         current_player_copy = player
+        valid_pos_copy = valid_positions[:]
 
         # Execute the move on the copied state
         start_x, start_y = position
@@ -306,6 +304,7 @@ class BlokusDuoAI:
 
         placed_pieces_copy[player].append(piece)
         pieces_copy[player].pop(piece_index)  # remove used piece
+        self.update_valid_pos(piece, position, valid_pos_copy)
 
         # Evaluate board now or check if game ends / no moves
         if depth == 0:
@@ -316,11 +315,11 @@ class BlokusDuoAI:
         next_player = self.players[1] if player == self.players[0] else self.players[0]
 
         # Check if next player has moves
-        next_moves = self.get_all_moves(next_player, board_copy, pieces_copy, placed_pieces_copy)
+        next_moves = self.get_all_moves(next_player, board_copy, pieces_copy, placed_pieces_copy, valid_pos_copy)
         if not next_moves:
             # If next player cannot move, maybe the current player gets another turn or game ends
             # Check if current player can also not move
-            current_moves = self.get_all_moves(player, board_copy, pieces_copy, placed_pieces_copy)
+            current_moves = self.get_all_moves(player, board_copy, pieces_copy, placed_pieces_copy, valid_pos_copy)
             if not current_moves:
                 # Both cannot move: Game ends, evaluate final score
                 return self.static_evaluation(board_copy, pieces_copy)
@@ -328,46 +327,44 @@ class BlokusDuoAI:
                 # Next player passes, same player continues
                 # This scenario is complex, but let's say if opponent passes, we call minimax again for the same player, reducing depth.
                 return self.minimax_search(player, depth - 1, board_copy, pieces_copy, placed_pieces_copy, alpha, beta,
-                                           maximizing_player)
+                                           maximizing_player, valid_pos_copy)
         else:
             # Normal turn for next player
             return self.minimax_search(next_player, depth - 1, board_copy, pieces_copy, placed_pieces_copy, alpha, beta,
-                                       not maximizing_player)
+                                       not maximizing_player, valid_pos_copy)
 
-    def minimax_search(self, player, depth, board, pieces, placed_pieces, alpha, beta, maximizing_player):
+    def minimax_search(self, player, depth, board, pieces, placed_pieces, alpha, beta, maximizing_player, valid_positions):
         """
         The recursive minimax function that explores possible moves for `player`.
         """
+
         if depth == 0:
             return self.static_evaluation(board, pieces)
 
-        moves = self.get_all_moves(player, board, pieces, placed_pieces)
+        valid_pos_copy = valid_positions[:]
+        moves = self.get_all_moves(player, board, pieces, placed_pieces, valid_pos_copy)
         if not moves:
             # Player passes turn
             # Check if other player also can't move
+            valid_pos_copy = valid_positions[:]
             other_player = self.players[1] if player == self.players[0] else self.players[0]
-            other_moves = self.get_all_moves(other_player, board, pieces, placed_pieces)
+            other_moves = self.get_all_moves(other_player, board, pieces, placed_pieces, valid_pos_copy)
             if not other_moves:
                 # Game over
                 return self.static_evaluation(board, pieces)
             else:
                 # Opponent gets next turn
                 return self.minimax_search(other_player, depth - 1, board, pieces, placed_pieces, alpha, beta,
-                                           not maximizing_player)
+                                           not maximizing_player, valid_pos_copy)
 
         best_score = -math.inf if maximizing_player else math.inf
 
         for (p_index, pos, p_piece) in moves:
             # Simulate move
             board_copy = [r[:] for r in board]
-            pieces_copy = {
-                "Player 1": copy.deepcopy(pieces["Player 1"]),
-                "Player 2": copy.deepcopy(pieces["Player 2"])
-            }
-            placed_pieces_copy = {
-                "Player 1": copy.deepcopy(placed_pieces["Player 1"]),
-                "Player 2": copy.deepcopy(placed_pieces["Player 2"])
-            }
+            pieces_copy = {player: pieces[player][:] for player in pieces}
+            placed_pieces_copy = {player: placed_pieces[player][:] for player in placed_pieces}
+            valid_pos_copy = valid_positions[:]
 
             start_x, start_y = pos
             current_player_marker = "X" if player == "Player 1" else "O"
@@ -377,11 +374,12 @@ class BlokusDuoAI:
 
             placed_pieces_copy[player].append(p_piece)
             pieces_copy[player].pop(p_index)
+            self.update_valid_pos(p_piece, pos, valid_pos_copy)
 
             next_player = self.players[1] if player == self.players[0] else self.players[0]
 
             score = self.minimax_search(next_player, depth - 1, board_copy, pieces_copy, placed_pieces_copy, alpha,
-                                        beta, not maximizing_player)
+                                        beta, not maximizing_player, valid_pos_copy)
 
             if maximizing_player:
                 if score > best_score:
@@ -397,7 +395,7 @@ class BlokusDuoAI:
 
         return best_score
 
-    def get_all_moves(self, player, board, pieces, placed_pieces):
+    def get_all_moves(self, player, board, pieces, placed_pieces, valid_positions):
         """
         Generate all possible moves for `player` given the current board and piece set.
         Returns a list of tuples (piece_index, position, rotated_piece).
@@ -406,10 +404,9 @@ class BlokusDuoAI:
         for piece_index, piece in enumerate(pieces[player]):
             rotated_pieces = self.rotate_piece(piece)
             for ro_piece in rotated_pieces:
-                for row in range(self.board_size):
-                    for col in range(self.board_size):
-                        if self.is_valid_move_sim(player, ro_piece, (row, col), board, placed_pieces):
-                            valid_moves.append((piece_index, (row, col), ro_piece))
+                for pos in valid_positions:
+                        if self.is_valid_move_sim(player, ro_piece, pos, board, placed_pieces):
+                            valid_moves.append((piece_index, pos, ro_piece))
         return valid_moves
 
     def is_valid_move_sim(self, player, piece, position, board, placed_pieces):
