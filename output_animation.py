@@ -72,9 +72,10 @@ def create_animation(board_states, output_file=None):
     else:
         plt.show()
 
+if __name__ == "__main__":
 
-# Load board states
-board_states = load_board_states("board.txt")
+    # Load board states
+    board_states = load_board_states("board.txt")
 
-# Create and display the animation
-create_animation(board_states, output_file="blokus_animation.gif")
+    # Create and display the animation
+    create_animation(board_states, output_file="blokus_animation.gif")
