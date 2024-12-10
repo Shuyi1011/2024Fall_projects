@@ -4,6 +4,19 @@ Shuyi Guo, Yunhe Li
 
 ## Updates after presentation
 1. Refine README, explain how to use our code/open the time complexity file.
+2. Make it an option to use a smaller set of pieces and a smaller board. 
+
+In the presentation, we mentioned that it's really slow to complete a game with 2 AI players. TA gave us some advice: we can use a smaller board for testing purpose.
+
+You can change the code in ```game.py``` like this to use the smaller board, which is super fast.
+```markdown
+```python
+if __name__ == "__main__":
+    game = BlokusDuoAI()
+    # # To play with a smaller set of pieces and a smaller board:
+    # game = BlokusDuoAI(10, full_pieces=False)
+    game.play()
+```
 
 
 ## Game Rules
@@ -30,22 +43,30 @@ If a player places all their pieces, they receive a bonus of -5 points.
 
 ## How to use the code?
 Run the following command:
-
-```python blokus_game.py```
+```markdown
+```python
+python blokus_game.py
+```
 
 After game ends, a txt result file will be generated, which includes all game states. 
 
 Then you can generate a GIF based on the result file. Run the following command:
-
-```python output_animation.py```
+```markdown
+```python
+python output_animation.py
+```
 
 ## Time Complexity Analysis
 Check the files named ```output.prof```
 
 In order to open this file, you need to install a package by running the following command:
-
-```pip install snakeviz```
+```markdown
+```python
+pip install snakeviz
+```
 
 Then open the file by running the following command:
-
-```snakeviz output.prof```
+```markdown
+```python
+snakeviz output.prof
+```
