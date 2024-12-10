@@ -3,10 +3,10 @@ import copy
 import math
 
 class BlokusDuoAI:
-    def __init__(self):
-        self.board_size = 14
+    def __init__(self, board_size=14, full_pieces=True):
+        self.board_size = board_size
         self.board = [[None for _ in range(self.board_size)] for _ in range(self.board_size)]
-        self.pieces = self.generate_pieces()
+        self.pieces = self.generate_pieces(full_pieces)
         self.start_positions = {'Player 1': (0, 0), 'Player 2': (13, 13)}
         self.players = ['Player 1', 'Player 2']
         self.current_player = self.players[0]
@@ -14,40 +14,54 @@ class BlokusDuoAI:
         self.maximizing_player = 'Player 1'
         self.valid_pos = self.initial_valid_pos()
     
-    def generate_full_blokus_pieces(self):
+    def generate_full_blokus_pieces(self, full_pieces=True):
         """Generate the complete set of Blokus Duo pieces."""
-        pieces = [
-            # 1-square piece
-            [(0, 0)],
+        if full_pieces:
+            pieces = [
+                # 1-square piece
+                [(0, 0)],
 
-            # 2-square pieces
-            [(0, 0), (1, 0)],
+                # 2-square pieces
+                [(0, 0), (1, 0)],
 
-            # 3-square pieces
-            [(0, 0), (1, 0), (2, 0)],  # Line
-            [(0, 0), (1, 0), (1, 1)],  # L-shape
+                # 3-square pieces
+                [(0, 0), (1, 0), (2, 0)],  # Line
+                [(0, 0), (1, 0), (1, 1)],  # L-shape
 
-            # 4-square pieces
-            [(0, 0), (1, 0), (2, 0), (3, 0)],  # Line
-            [(0, 0), (0, 1), (0, 2), (1, 2)],  # L-shape
-            [(0, 0), (0, 1), (1, 0), (1, 1)],  # Square
-            [(0, 0), (1, 0), (1, 1), (1, 2)],  # Zigzag
-            [(0, 0), (0, 1), (0, 2), (1, 1)],
+                # 4-square pieces
+                [(0, 0), (1, 0), (2, 0), (3, 0)],  # Line
+                [(0, 0), (0, 1), (0, 2), (1, 2)],  # L-shape
+                [(0, 0), (0, 1), (1, 0), (1, 1)],  # Square
+                [(0, 0), (1, 0), (1, 1), (1, 2)],  # Zigzag
+                [(0, 0), (0, 1), (0, 2), (1, 1)],
 
-            # 5-square pieces
-            [(0, 0), (1, 0), (2, 0), (3, 0), (4, 0)],  # Long line
-            [(0, 0), (0, 1), (0, 2), (1, 2), (1, 3)],  # L-shape
-            [(0, 0), (1, 0), (1, 1), (2, 0), (3, 0)],  # T-shape
-            [(0, 0), (0, 1), (0, 2), (0, 3), (1, 3)],  # reverse_L
-            [(0, 0), (0, 1), (1, 1), (1, 2), (2, 2)],  # Stair_shape
-            [(1, 0), (0, 1), (1, 1), (2, 1), (1, 2)],  # Cross
-            [(0, 0), (0, 1), (1, 1), (1, 2), (1, 3)],  # Stack-shape
-            [(0, 0), (1, 0), (1, 1), (1, 2), (2, 2)],
-            [(0, 0), (1, 0), (1, 1), (1, 2), (2, 1)],
-            [(0, 0), (0, 1), (1, 0), (1, 1), (1, 2)],
-            [(0, 0), (0, 1), (1, 0), (2, 0), (2, 1)],
-            [(0, 0), (0, 1), (0, 2), (1, 1), (2, 1)]
-        ]
+                # 5-square pieces
+                [(0, 0), (1, 0), (2, 0), (3, 0), (4, 0)],  # Long line
+                [(0, 0), (0, 1), (0, 2), (1, 2), (1, 3)],  # L-shape
+                [(0, 0), (1, 0), (1, 1), (2, 0), (3, 0)],  # T-shape
+                [(0, 0), (0, 1), (0, 2), (0, 3), (1, 3)],  # reverse_L
+                [(0, 0), (0, 1), (1, 1), (1, 2), (2, 2)],  # Stair_shape
+                [(1, 0), (0, 1), (1, 1), (2, 1), (1, 2)],  # Cross
+                [(0, 0), (0, 1), (1, 1), (1, 2), (1, 3)],  # Stack-shape
+                [(0, 0), (1, 0), (1, 1), (1, 2), (2, 2)],
+                [(0, 0), (1, 0), (1, 1), (1, 2), (2, 1)],
+                [(0, 0), (0, 1), (1, 0), (1, 1), (1, 2)],
+                [(0, 0), (0, 1), (1, 0), (2, 0), (2, 1)],
+                [(0, 0), (0, 1), (0, 2), (1, 1), (2, 1)]
+            ]
+        else:
+            pieces = [
+                # 1-square piece
+                [(0, 0)],
+
+                # 2-square pieces
+                [(0, 0), (1, 0)],
+
+                # 3-square pieces
+                [(0, 0), (1, 0), (2, 0)],  # Line
+                [(0, 0), (1, 0), (1, 1)],  # L-shape
+            ]
+
         return pieces
 
     def rotate_piece(self, piece):
@@ -64,11 +78,11 @@ class BlokusDuoAI:
             rotations.add(tuple(normalized)) 
         return [list(r) for r in rotations]  
     
-    def generate_pieces(self):
+    def generate_pieces(self, full_pieces):
         """Generate full Blokus Duo pieces for each player."""
         return {
-            "Player 1": self.generate_full_blokus_pieces(),
-            "Player 2": self.generate_full_blokus_pieces(),
+            "Player 1": self.generate_full_blokus_pieces(full_pieces),
+            "Player 2": self.generate_full_blokus_pieces(full_pieces),
         }
 
     def display_board(self):
@@ -514,4 +528,6 @@ class BlokusDuoAI:
     # Then you would call `self.minimax_ai(self.current_player)` in your play loop for a turn instead of random_ai or heuristic_ai.
 if __name__ == "__main__":
     game = BlokusDuoAI()
+    # # To play with a smaller set of pieces and a smaller board:
+    # game = BlokusDuoAI(10, full_pieces=False)
     game.play()
