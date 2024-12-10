@@ -1,4 +1,14 @@
 # Blokus Duo
+![Blokus](blokus.webp)
+
+## Table of Contents
+- [Team Member](#team-member)
+- [Updates after presentation](#updates-after-presentation)
+- [Game Rules](#game-rules)
+- [Three AI players](#three-ai-players)
+- [How to use the code?](#how-to-use-the-code)
+- [Time Complexity Analysis](#time-complexity-analysis)
+
 ## Team Member
 Shuyi Guo, Yunhe Li
 
@@ -17,7 +27,10 @@ if __name__ == "__main__":
 
 
 ## Game Rules
+You can check here to see more detailed rules: [Blokus Rules](https://en.wikipedia.org/wiki/Blokus)
+
 1. Objective:
+
 Place as many of your pieces on the board as possible while blocking your opponent. The player with the fewest squares left unplaced wins.
 2. Setup:
 * The board is a 14x14 grid.
@@ -34,14 +47,18 @@ Place as many of your pieces on the board as possible while blocking your oppone
 5.	Bonus:
 If a player places all their pieces, they receive a bonus of -5 points.
 
-## Two AI players
+## Three AI players
 * Random Player: it selects a valid move at random from the available options.
-* Smart Player: (1) Heuristic AI: Evaluates potential moves based on a heuristic that maximizes future placement options; (2) Minimax AI: Uses the Minimax algorithm to evaluate the best move by simulating multiple future turns. Considers both the AI’s potential moves and the opponent’s responses to find the optimal strategy.
+* Smart Player: 
+
+(1) Heuristic AI: Evaluates potential moves based on a heuristic that maximizes future placement options; 
+
+(2) Minimax AI: Uses the Minimax algorithm to evaluate the best move by simulating multiple future turns. Considers both the AI’s potential moves and the opponent’s responses to find the optimal strategy.
 
 ## How to use the code?
 Run the following command:
 ```python
-python blokus_game.py
+python game.py
 ```
 
 After game ends, a txt result file will be generated, which includes all game states. 
